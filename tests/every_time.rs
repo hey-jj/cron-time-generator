@@ -1,7 +1,7 @@
-//! Fluent builder cases (E1-E15) plus the `between` one-shot behavior.
+//! Fluent builder cases (E1-E15) plus keyword and range edge cases.
 //!
 //! These cover the `every` and `between` terminal methods across stepped,
-//! even, uneven, and range intervals.
+//! even, uneven, range, and unknown-keyword intervals.
 
 mod common;
 
@@ -57,18 +57,26 @@ fn every_zero_returns_base() {
     check("0 0 * * *", &C::every(0).days());
 }
 
-// between is one-shot: a second terminal call no longer ranges
+// An unknown keyword is neither "even" nor "uneven", so it renders the base.
 #[test]
-fn between_is_one_shot() {
-    let mut builder = C::between(10, 20);
-    assert_eq!(builder.days(), "0 0 10-20 * *");
-    // The pair is not a step above 1 and not uneven, so the second call
-    // returns the plain base.
-    assert_eq!(builder.minutes(), "* * * * *");
+fn every_unknown_keyword_returns_base() {
+    check("* * * * *", &C::every("banana").minutes());
+    check("0 * * * *", &C::every("banana").hours());
+    check("0 0 * * *", &C::every("banana").days());
+    check("* * * * *", &C::every("evry").minutes());
 }
 
 // between does not validate endpoint order
 #[test]
 fn between_keeps_reversed_endpoints() {
     assert_eq!(C::between(20, 10).days(), "0 0 20-10 * *");
+}
+
+// The between range renders correctly for each terminal field.
+#[test]
+fn between_renders_each_field() {
+    assert_eq!(C::between(10, 20).minutes(), "10-20 * * * *");
+    assert_eq!(C::between(10, 20).hours(), "0 10-20 * * *");
+    assert_eq!(C::between(10, 20).days(), "0 0 10-20 * *");
+    assert_eq!(C::between(10, 20).days_at(9, 5), "5 9 10-20 * *");
 }
