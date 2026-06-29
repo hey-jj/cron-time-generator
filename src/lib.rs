@@ -31,31 +31,35 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-pub mod helpers;
-
 mod days;
 mod error;
 mod every_time;
-mod nums;
+mod helpers;
+mod one_or_many;
 
 pub use days::Day;
 pub use error::CronError;
 pub use every_time::{EveryTime, Interval};
-pub use nums::Nums;
+pub use one_or_many::OneOrMany;
 
-use helpers::{day, days_to_integers, hour, join_ints, minute, validate_start_to_end_day};
+use helpers::{day, days_to_field, hour, minute, validate_start_to_end_day};
 
-/// The entry point. All methods are associated functions with no state.
+/// The entry point. A stateless namespace for the builder functions.
 ///
-/// Each method returns a cron string, or a [`Result`] for the three fallible
-/// calls. See the crate docs for the field layout and numbering.
+/// `CronTime` carries no state and has no constructor. Every method is an
+/// associated function, called as `CronTime::every_minute()`. The unit struct
+/// groups the API under one name. Each method returns a cron string, or a
+/// [`Result`] for the fallible calls. See the crate docs for the field layout
+/// and numbering.
 pub struct CronTime;
 
 impl CronTime {
     /// Start a stepped interval builder. Call a terminal method to finish.
     ///
     /// Pass an integer for `*/n`, `"even"` for a step of 2, or `"uneven"` for
-    /// the odd-step form.
+    /// the odd-step form. The interval is an integer step, so a fractional
+    /// value cannot be expressed. Only `"even"` and `"uneven"` are keywords.
+    /// Any other string renders the plain field base, the same as `every(1)`.
     ///
     /// # Examples
     ///
@@ -64,6 +68,7 @@ impl CronTime {
     ///
     /// assert_eq!(CronTime::every(2).hours(), "0 */2 * * *");
     /// assert_eq!(CronTime::every("uneven").minutes(), "1-59/2 * * * *");
+    /// assert_eq!(CronTime::every("noop").minutes(), "* * * * *");
     /// ```
     pub fn every(interval: impl Into<Interval>) -> EveryTime {
         EveryTime::new(interval.into())
@@ -97,13 +102,13 @@ impl CronTime {
     /// assert_eq!(CronTime::every_hour_at(15), "15 * * * *");
     /// assert_eq!(CronTime::every_hour_at(vec![10, 20, 30]), "10,20,30 * * * *");
     /// ```
-    pub fn every_hour_at(minutes_of_the_hour: impl Into<Nums>) -> String {
+    pub fn every_hour_at(minutes_of_the_hour: impl Into<OneOrMany>) -> String {
         format!("{} * * * *", minutes_of_the_hour.into())
     }
 
     /// Every day at midnight: `"0 0 * * *"`.
     pub fn every_day() -> String {
-        day(Nums::One(0), Nums::One(0))
+        day(OneOrMany::One(0), OneOrMany::One(0))
     }
 
     /// Every day at the given hour and minute.
@@ -119,16 +124,16 @@ impl CronTime {
     /// assert_eq!(CronTime::every_day_at(10, 30), "30 10 * * *");
     /// ```
     pub fn every_day_at(
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
     ) -> String {
         day(hours_of_the_day.into(), minutes_of_the_hour.into())
     }
 
     /// Every Sunday at the given hour and minute. Day-of-week field is `0`.
     pub fn every_sunday_at(
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
     ) -> String {
         weekday_at(hours_of_the_day.into(), minutes_of_the_hour.into(), 0)
     }
@@ -140,8 +145,8 @@ impl CronTime {
 
     /// Every Monday at the given hour and minute. Day-of-week field is `1`.
     pub fn every_monday_at(
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
     ) -> String {
         weekday_at(hours_of_the_day.into(), minutes_of_the_hour.into(), 1)
     }
@@ -153,8 +158,8 @@ impl CronTime {
 
     /// Every Tuesday at the given hour and minute. Day-of-week field is `2`.
     pub fn every_tuesday_at(
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
     ) -> String {
         weekday_at(hours_of_the_day.into(), minutes_of_the_hour.into(), 2)
     }
@@ -166,8 +171,8 @@ impl CronTime {
 
     /// Every Wednesday at the given hour and minute. Day-of-week field is `3`.
     pub fn every_wednesday_at(
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
     ) -> String {
         weekday_at(hours_of_the_day.into(), minutes_of_the_hour.into(), 3)
     }
@@ -179,8 +184,8 @@ impl CronTime {
 
     /// Every Thursday at the given hour and minute. Day-of-week field is `4`.
     pub fn every_thursday_at(
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
     ) -> String {
         weekday_at(hours_of_the_day.into(), minutes_of_the_hour.into(), 4)
     }
@@ -192,8 +197,8 @@ impl CronTime {
 
     /// Every Friday at the given hour and minute. Day-of-week field is `5`.
     pub fn every_friday_at(
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
     ) -> String {
         weekday_at(hours_of_the_day.into(), minutes_of_the_hour.into(), 5)
     }
@@ -205,8 +210,8 @@ impl CronTime {
 
     /// Every Saturday at the given hour and minute. Day-of-week field is `6`.
     pub fn every_saturday_at(
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
     ) -> String {
         weekday_at(hours_of_the_day.into(), minutes_of_the_hour.into(), 6)
     }
@@ -233,12 +238,10 @@ impl CronTime {
         D: Clone + Into<Day>,
     {
         if days.is_empty() {
-            return Err(CronError::EmptyDays {
-                method: "onSpecificDays",
-            });
+            return Err(CronError::EmptyDays);
         }
-        let ints = days_to_integers(&to_day_vec(days))?;
-        Ok(format!("0 0 * * {}", join_ints(&ints)))
+        let days = days_to_field(days.iter().cloned())?;
+        Ok(format!("0 0 * * {days}"))
     }
 
     /// On the given days of the week at the given hour and minute.
@@ -246,23 +249,20 @@ impl CronTime {
     /// Returns [`CronError::EmptyDays`] when `days` is empty.
     pub fn on_specific_days_at<D>(
         days: &[D],
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
     ) -> Result<String, CronError>
     where
         D: Clone + Into<Day>,
     {
         if days.is_empty() {
-            return Err(CronError::EmptyDays {
-                method: "onSpecificDaysAt",
-            });
+            return Err(CronError::EmptyDays);
         }
-        let ints = days_to_integers(&to_day_vec(days))?;
+        let days = days_to_field(days.iter().cloned())?;
         Ok(format!(
-            "{} {} * * {}",
+            "{} {} * * {days}",
             minutes_of_the_hour.into(),
             hours_of_the_day.into(),
-            join_ints(&ints)
         ))
     }
 
@@ -286,22 +286,26 @@ impl CronTime {
     /// ```
     pub fn every_week_at<D>(
         days_of_the_week: &[D],
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
     ) -> Result<String, CronError>
     where
         D: Clone + Into<Day>,
     {
-        let ints = days_to_integers(&to_day_vec(days_of_the_week))?;
+        let days = days_to_field(days_of_the_week.iter().cloned())?;
         Ok(format!(
-            "{} {} * * {}",
+            "{} {} * * {days}",
             minutes_of_the_hour.into(),
             hours_of_the_day.into(),
-            join_ints(&ints)
         ))
     }
 
     /// Every weekday, Monday through Friday: `"0 0 * * 1-5"`.
+    ///
+    /// Returns a [`String`], not a [`Result`], because the fixed Monday to
+    /// Friday range always runs forward. Use
+    /// [`CronTime::every_week_day_range`] for a custom pair that can fail the
+    /// order check.
     pub fn every_week_day() -> String {
         Self::every_week_day_range(Day::from("monday"), Day::from("friday"))
             .expect("monday precedes friday")
@@ -329,11 +333,13 @@ impl CronTime {
 
     /// Every weekday Monday through Friday at the given hour and minute.
     ///
-    /// Returns [`CronError::StartAfterEnd`] only when called through a custom
-    /// range. With the fixed Monday-Friday range it always succeeds.
+    /// Returns a [`String`], not a [`Result`], because the fixed Monday to
+    /// Friday range always runs forward. Use
+    /// [`CronTime::every_week_day_at_range`] for a custom pair that can fail
+    /// the order check.
     pub fn every_week_day_at(
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
     ) -> String {
         Self::every_week_day_at_range(
             hours_of_the_day,
@@ -349,8 +355,8 @@ impl CronTime {
     /// Returns [`CronError::StartAfterEnd`] when the start day comes after the
     /// end day.
     pub fn every_week_day_at_range(
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
         start_day: impl Into<Day>,
         end_day: impl Into<Day>,
     ) -> Result<String, CronError> {
@@ -367,7 +373,9 @@ impl CronTime {
     /// Every weekend, Saturday and Sunday: `"0 0 * * 6,0"`.
     ///
     /// The day field keeps source order, so Saturday `6` comes before Sunday
-    /// `0`.
+    /// `0`. Returns a [`String`], not a [`Result`], because the weekend path
+    /// builds a comma list and never runs the order check. Use
+    /// [`CronTime::every_weekend_range`] for a custom pair.
     pub fn every_weekend() -> String {
         Self::every_weekend_range(Day::from("saturday"), Day::from("sunday"))
             .expect("numeric day cannot fail")
@@ -394,9 +402,13 @@ impl CronTime {
     }
 
     /// Every weekend, Saturday and Sunday, at the given hour and minute.
+    ///
+    /// Returns a [`String`], not a [`Result`], because the weekend path builds
+    /// a comma list and never runs the order check. Use
+    /// [`CronTime::every_weekend_at_range`] for a custom pair.
     pub fn every_weekend_at(
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
     ) -> String {
         Self::every_weekend_at_range(
             hours_of_the_day,
@@ -412,18 +424,16 @@ impl CronTime {
     /// The two days form a comma list in the order given. Order is not
     /// validated.
     pub fn every_weekend_at_range(
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
         start_day: impl Into<Day>,
         end_day: impl Into<Day>,
     ) -> Result<String, CronError> {
-        let days = [start_day.into(), end_day.into()];
-        let ints = days_to_integers(&days)?;
+        let days = days_to_field([start_day.into(), end_day.into()])?;
         Ok(format!(
-            "{} {} * * {}",
+            "{} {} * * {days}",
             minutes_of_the_hour.into(),
             hours_of_the_day.into(),
-            join_ints(&ints)
         ))
     }
 
@@ -443,9 +453,9 @@ impl CronTime {
     /// assert_eq!(CronTime::every_month_on(vec![1, 15], 0, 0), "0 0 1,15 * *");
     /// ```
     pub fn every_month_on(
-        days_of_the_month: impl Into<Nums>,
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        days_of_the_month: impl Into<OneOrMany>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
     ) -> String {
         format!(
             "{} {} {} * *",
@@ -471,10 +481,10 @@ impl CronTime {
     /// assert_eq!(CronTime::every_year_in(vec![6, 12], 1, 0, 0), "0 0 1 6,12 *");
     /// ```
     pub fn every_year_in(
-        months_of_the_year: impl Into<Nums>,
-        days_of_the_month: impl Into<Nums>,
-        hours_of_the_day: impl Into<Nums>,
-        minutes_of_the_hour: impl Into<Nums>,
+        months_of_the_year: impl Into<OneOrMany>,
+        days_of_the_month: impl Into<OneOrMany>,
+        hours_of_the_day: impl Into<OneOrMany>,
+        minutes_of_the_hour: impl Into<OneOrMany>,
     ) -> String {
         format!(
             "{} {} {} {} *",
@@ -487,14 +497,6 @@ impl CronTime {
 }
 
 /// Format a weekday-at string for a fixed day-of-week integer.
-fn weekday_at(hours: Nums, minutes: Nums, dow: i64) -> String {
+fn weekday_at(hours: OneOrMany, minutes: OneOrMany, dow: i64) -> String {
     format!("{minutes} {hours} * * {dow}")
-}
-
-/// Clone a slice of `Into<Day>` items into a `Vec<Day>`.
-fn to_day_vec<D>(days: &[D]) -> Vec<Day>
-where
-    D: Clone + Into<Day>,
-{
-    days.iter().map(|d| d.clone().into()).collect()
 }

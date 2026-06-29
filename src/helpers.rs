@@ -1,30 +1,20 @@
 //! Building blocks shared by the public methods.
 //!
 //! These functions produce the canonical field strings and the single-field
-//! replacement that the fluent builder uses. They are public so tests and
-//! callers can reach the same primitives the higher-level methods build on.
+//! replacement that the fluent builder uses. They are crate-internal.
 
 use crate::days::Day;
 use crate::error::CronError;
-use crate::nums::Nums;
+use crate::one_or_many::OneOrMany;
 
 /// Replace one field of a 5-field cron string.
 ///
 /// `base` is split on single spaces, the element at `position` is replaced
-/// with `char`, and the parts are rejoined with single spaces. When `base` is
+/// with `value`, and the parts are rejoined with single spaces. When `base` is
 /// `None` the minute base `"* * * * *"` is used.
 ///
 /// `position` is assumed in range `0..=4`, which is all the builder ever uses.
-///
-/// # Examples
-///
-/// ```
-/// use cron_time_generator::helpers::splice_into_position;
-///
-/// assert_eq!(splice_into_position(0, "2", None), "2 * * * *");
-/// assert_eq!(splice_into_position(4, "5", None), "* * * * 5");
-/// ```
-pub fn splice_into_position(position: usize, char: &str, base: Option<&str>) -> String {
+pub(crate) fn replace_field(position: usize, value: &str, base: Option<&str>) -> String {
     let owned;
     let source = match base {
         Some(s) => s,
@@ -36,20 +26,20 @@ pub fn splice_into_position(position: usize, char: &str, base: Option<&str>) -> 
 
     let mut parts: Vec<String> = source.split(' ').map(|s| s.to_string()).collect();
     if position < parts.len() {
-        parts[position] = char.to_string();
+        parts[position] = value.to_string();
     } else {
-        parts.push(char.to_string());
+        parts.push(value.to_string());
     }
     parts.join(" ")
 }
 
 /// The every-minute base: `"* * * * *"`.
-pub fn minute() -> String {
+pub(crate) fn minute() -> String {
     "* * * * *".to_string()
 }
 
 /// The top-of-the-hour base: `"0 * * * *"`.
-pub fn hour() -> String {
+pub(crate) fn hour() -> String {
     "0 * * * *".to_string()
 }
 
@@ -58,42 +48,120 @@ pub fn hour() -> String {
 /// The output puts minutes first, then hours: `"{minutes} {hours} * * *"`.
 /// Note the argument order is hours then minutes, the reverse of the field
 /// order. Both default to `0`.
-///
-/// # Examples
-///
-/// ```
-/// use cron_time_generator::helpers::day;
-/// use cron_time_generator::Nums;
-///
-/// assert_eq!(day(Nums::from(10), Nums::from(30)), "30 10 * * *");
-/// ```
-pub fn day(hours_of_the_day: Nums, minutes_of_the_hour: Nums) -> String {
+pub(crate) fn day(hours_of_the_day: OneOrMany, minutes_of_the_hour: OneOrMany) -> String {
     format!("{minutes_of_the_hour} {hours_of_the_day} * * *")
 }
 
-/// Resolve a list of day arguments to their integers.
+/// Resolve a sequence of day arguments to a [`OneOrMany`] list of integers.
 ///
-/// Each element runs through [`Day::to_int`]. A bad name stops the whole call
-/// with [`CronError::InvalidDay`].
-pub fn days_to_integers(days: &[Day]) -> Result<Vec<i64>, CronError> {
-    days.iter().map(Day::to_int).collect()
+/// Each item is converted to a [`Day`] and run through [`Day::to_int`]. A bad
+/// name stops the whole call with [`CronError::InvalidDay`].
+pub(crate) fn days_to_field<I, D>(days: I) -> Result<OneOrMany, CronError>
+where
+    I: IntoIterator<Item = D>,
+    D: Into<Day>,
+{
+    let ints = days
+        .into_iter()
+        .map(|d| d.into().to_int())
+        .collect::<Result<Vec<i64>, _>>()?;
+    Ok(OneOrMany::Many(ints))
 }
 
 /// Check that a weekday range runs forward.
 ///
 /// Returns [`CronError::StartAfterEnd`] when `start_day > end_day`.
-pub fn validate_start_to_end_day(start_day: i64, end_day: i64) -> Result<(), CronError> {
+pub(crate) fn validate_start_to_end_day(start_day: i64, end_day: i64) -> Result<(), CronError> {
     if start_day > end_day {
         return Err(CronError::StartAfterEnd);
     }
     Ok(())
 }
 
-/// Render a slice of integers comma-joined, matching a list cron field.
-pub(crate) fn join_ints(values: &[i64]) -> String {
-    values
-        .iter()
-        .map(|n| n.to_string())
-        .collect::<Vec<_>>()
-        .join(",")
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn replace_field_field0() {
+        assert_eq!(replace_field(0, "2", None), "2 * * * *");
+    }
+
+    #[test]
+    fn replace_field_field4() {
+        assert_eq!(replace_field(4, "5", None), "* * * * 5");
+    }
+
+    #[test]
+    fn replace_field_explicit_base() {
+        assert_eq!(replace_field(2, "X", Some("a b c d e")), "a b X d e");
+    }
+
+    #[test]
+    fn minute_base() {
+        assert_eq!(minute(), "* * * * *");
+    }
+
+    #[test]
+    fn hour_base() {
+        assert_eq!(hour(), "0 * * * *");
+    }
+
+    #[test]
+    fn day_with_hour_and_minute() {
+        assert_eq!(day(OneOrMany::from(10), OneOrMany::from(30)), "30 10 * * *");
+    }
+
+    #[test]
+    fn day_with_defaults() {
+        assert_eq!(day(OneOrMany::from(0), OneOrMany::from(0)), "0 0 * * *");
+    }
+
+    #[test]
+    fn days_to_field_all_long_names() {
+        let names = [
+            "sunday",
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+        ];
+        assert_eq!(days_to_field(names).unwrap().to_string(), "0,1,2,3,4,5,6");
+    }
+
+    #[test]
+    fn days_to_field_single_name() {
+        assert_eq!(days_to_field(["monday"]).unwrap().to_string(), "1");
+    }
+
+    #[test]
+    fn days_to_field_numeric_passthrough() {
+        assert_eq!(days_to_field([9i64]).unwrap().to_string(), "9");
+    }
+
+    #[test]
+    fn days_to_field_invalid_name() {
+        assert_eq!(
+            days_to_field(["garbage"]),
+            Err(CronError::InvalidDay {
+                day: "garbage".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn validate_start_to_end_day_ok() {
+        assert!(validate_start_to_end_day(1, 5).is_ok());
+        assert!(validate_start_to_end_day(3, 3).is_ok());
+    }
+
+    #[test]
+    fn validate_start_to_end_day_rejects_backward() {
+        assert_eq!(
+            validate_start_to_end_day(5, 1),
+            Err(CronError::StartAfterEnd)
+        );
+    }
 }
