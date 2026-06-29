@@ -6,5 +6,7 @@ description = "generate cron expression strings via a fluent builder API"
 license = "MIT"
 repository = "https://github.com/hey-jj/cron-time-generator"
 readme = "README.md"
+keywords = ["cron", "crontab", "schedule", "builder"]
+categories = ["date-and-time"]
 
 [dependencies]
