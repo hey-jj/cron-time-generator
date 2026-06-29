@@ -10,16 +10,8 @@ use cron_time_generator::{CronError, CronTime as C, Day};
 fn on_specific_days_empty() {
     let empty: [&str; 0] = [];
     let err = C::on_specific_days(&empty).unwrap_err();
-    assert_eq!(
-        err,
-        CronError::EmptyDays {
-            method: "onSpecificDays"
-        }
-    );
-    assert_eq!(
-        err.to_string(),
-        "onSpecificDays expects days to be an array of days string."
-    );
+    assert_eq!(err, CronError::EmptyDays);
+    assert_eq!(err.to_string(), "day list must not be empty");
 }
 
 // X2
@@ -27,16 +19,8 @@ fn on_specific_days_empty() {
 fn on_specific_days_at_empty() {
     let empty: [&str; 0] = [];
     let err = C::on_specific_days_at(&empty, 3, 0).unwrap_err();
-    assert_eq!(
-        err,
-        CronError::EmptyDays {
-            method: "onSpecificDaysAt"
-        }
-    );
-    assert_eq!(
-        err.to_string(),
-        "onSpecificDaysAt expects days to be an array of days string."
-    );
+    assert_eq!(err, CronError::EmptyDays);
+    assert_eq!(err.to_string(), "day list must not be empty");
 }
 
 // X3
@@ -49,14 +33,14 @@ fn day_to_int_invalid_name() {
             day: "garbage".to_string()
         }
     );
-    assert_eq!(err.to_string(), "Day: \"garbage\" is not a valid day.");
+    assert_eq!(err.to_string(), "\"garbage\" is not a valid day name");
 }
 
 // X3 variant: the message uses the trimmed, lowercased form
 #[test]
 fn day_to_int_invalid_name_normalized() {
     let err = Day::from("  GARBAGE  ").to_int().unwrap_err();
-    assert_eq!(err.to_string(), "Day: \"garbage\" is not a valid day.");
+    assert_eq!(err.to_string(), "\"garbage\" is not a valid day name");
 }
 
 // X4
@@ -64,10 +48,7 @@ fn day_to_int_invalid_name_normalized() {
 fn every_week_day_start_after_end() {
     let err = C::every_week_day_range(Day::from("friday"), Day::from("monday")).unwrap_err();
     assert_eq!(err, CronError::StartAfterEnd);
-    assert_eq!(
-        err.to_string(),
-        "startDay must come before endDay following normal calendar sequence."
-    );
+    assert_eq!(err.to_string(), "start day must not come after end day");
 }
 
 // X5
