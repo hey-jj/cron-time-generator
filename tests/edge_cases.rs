@@ -2,7 +2,7 @@
 //!
 //! The builder never validates ranges or field emptiness. An empty list leaves
 //! a blank field. Numeric days pass through with no clamp. The weekend path
-//! keeps source order with no calendar check. These cases lock the exact
+//! keeps the order given with no calendar check. These cases lock the exact
 //! strings so a refactor cannot drift them.
 
 use cron_time_generator::{CronTime as C, Day};
@@ -58,7 +58,7 @@ fn on_specific_days_numeric_out_of_range() {
 }
 
 // every_weekend_at_range never runs the order check, so a reversed pair is
-// accepted and kept as a comma list in source order.
+// accepted and kept as a comma list in the order given.
 #[test]
 fn every_weekend_at_range_reversed_pair() {
     assert_eq!(

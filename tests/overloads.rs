@@ -1,8 +1,8 @@
 //! Default-argument and custom-day cases (D1-D10) plus short-name lists.
 //!
-//! These cover the branches the source test file skips: default minutes,
-//! custom weekday and weekend ranges, array day-of-month and month inputs,
-//! and short day names.
+//! These cover branches the method matrix does not: default minutes, custom
+//! weekday and weekend ranges, array day-of-month and month inputs, and short
+//! day names.
 
 mod common;
 

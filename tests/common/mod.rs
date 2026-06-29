@@ -1,8 +1,9 @@
 //! Shared test helper: a small cron-validity check.
 //!
 //! The suite asserts exact strings and that each string is a valid 5-field
-//! cron expression. This mirrors the dual invariant the source test harness
-//! applies. The grammar here is the standard one: no seconds, no name aliases.
+//! cron expression. The two checks together catch both wrong output and
+//! malformed shapes. The grammar here is the standard one: no seconds, no name
+//! aliases.
 
 /// Standard per-field value ranges, in field order.
 const RANGES: [(i64, i64); 5] = [

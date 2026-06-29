@@ -1,8 +1,8 @@
 //! Public method cases (M1-M40).
 //!
 //! Each case asserts the exact cron string and confirms the result is a valid
-//! 5-field cron expression. The `M#` comments trace each case to its numbered
-//! source case.
+//! 5-field cron expression. The `M#` comments number each case so failures
+//! point straight at the method under test.
 
 mod common;
 

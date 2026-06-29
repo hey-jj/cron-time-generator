@@ -16,7 +16,7 @@ use crate::one_or_many::OneOrMany;
 /// `position` is assumed in range `0..=4`, which is all the builder ever uses.
 pub(crate) fn replace_field(position: usize, value: &str, base: Option<&str>) -> String {
     let owned;
-    let source = match base {
+    let base_str = match base {
         Some(s) => s,
         None => {
             owned = minute();
@@ -24,7 +24,7 @@ pub(crate) fn replace_field(position: usize, value: &str, base: Option<&str>) ->
         }
     };
 
-    let mut parts: Vec<String> = source.split(' ').map(|s| s.to_string()).collect();
+    let mut parts: Vec<String> = base_str.split(' ').map(|s| s.to_string()).collect();
     if position < parts.len() {
         parts[position] = value.to_string();
     } else {

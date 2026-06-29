@@ -274,7 +274,7 @@ impl CronTime {
     /// On the given days of the week at the given hour and minute.
     ///
     /// Unlike [`CronTime::on_specific_days`] this does not reject an empty
-    /// list, matching the source. An empty list leaves the day field blank.
+    /// list. An empty list leaves the day field blank.
     ///
     /// # Examples
     ///
@@ -372,7 +372,7 @@ impl CronTime {
 
     /// Every weekend, Saturday and Sunday: `"0 0 * * 6,0"`.
     ///
-    /// The day field keeps source order, so Saturday `6` comes before Sunday
+    /// The day field keeps the order given, so Saturday `6` comes before Sunday
     /// `0`. Returns a [`String`], not a [`Result`], because the weekend path
     /// builds a comma list and never runs the order check. Use
     /// [`CronTime::every_weekend_range`] for a custom pair.

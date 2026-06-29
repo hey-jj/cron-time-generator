@@ -1,7 +1,7 @@
 //! Shape invariants over a swept input domain.
 //!
-//! These mirror the "valid cron" double invariant from the source harness and
-//! confirm field shapes hold across the natural input ranges. The sweep is
+//! Each case asserts the exact string and confirms it is valid cron. Together
+//! they hold field shapes across the natural input ranges. The sweep is
 //! exhaustive over small ranges, which keeps the suite free of a property
 //! framework while covering the whole domain.
 
