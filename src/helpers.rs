@@ -25,11 +25,7 @@ pub(crate) fn replace_field(position: usize, value: &str, base: Option<&str>) ->
     };
 
     let mut parts: Vec<String> = base_str.split(' ').map(|s| s.to_string()).collect();
-    if position < parts.len() {
-        parts[position] = value.to_string();
-    } else {
-        parts.push(value.to_string());
-    }
+    parts[position] = value.to_string();
     parts.join(" ")
 }
 
