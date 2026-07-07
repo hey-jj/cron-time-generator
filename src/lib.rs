@@ -23,10 +23,13 @@
 //!
 //! ## Fallible calls
 //!
-//! Three calls return [`Result`]. [`CronTime::on_specific_days`] and
-//! [`CronTime::on_specific_days_at`] reject an empty day list. Day-name lookup
-//! rejects unknown names. The weekday range rejects a start that comes after
-//! the end. Everything else is total.
+//! Seven associated functions return [`Result`]:
+//! [`CronTime::on_specific_days`], [`CronTime::on_specific_days_at`],
+//! [`CronTime::every_week_at`], [`CronTime::every_week_day_range`],
+//! [`CronTime::every_week_day_at_range`], [`CronTime::every_weekend_range`],
+//! and [`CronTime::every_weekend_at_range`]. They can reject an empty day list,
+//! unknown day names, or a weekday range where the start comes after the end.
+//! Everything else is total.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -46,11 +49,10 @@ use helpers::{day, days_to_field, hour, minute, validate_start_to_end_day};
 
 /// The entry point. A stateless namespace for the builder functions.
 ///
-/// `CronTime` carries no state and has no constructor. Every method is an
-/// associated function, called as `CronTime::every_minute()`. The unit struct
-/// groups the API under one name. Each method returns a cron string, or a
-/// [`Result`] for the fallible calls. See the crate docs for the field layout
-/// and numbering.
+/// `CronTime` carries no state. Users normally call associated functions such
+/// as `CronTime::every_minute()`. The unit struct groups the API under one
+/// name. Each method returns a cron string, or a [`Result`] for the fallible
+/// calls. See the crate docs for the field layout and numbering.
 pub struct CronTime;
 
 impl CronTime {
