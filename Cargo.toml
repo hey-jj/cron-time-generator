@@ -1,6 +1,6 @@
 [package]
 name = "cron-time-generator"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "generate cron expression strings via a fluent builder API"
 license = "MIT"
